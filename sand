@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Песок</title>
+<style>
+  body {
+    margin: 0;
+    background: black;
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    margin: auto;
+    background: black;
+    touch-action: none;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<script>
+let width, height, cellSize;
+let grid;
+const floorHeight = 5;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight;
+  cellSize = 5;
+  width = Math.floor(screenWidth / cellSize);
+  height = Math.floor(screenHeight / cellSize);
+
+  canvas.width = width * cellSize;
+  canvas.height = height * cellSize;
+
+  grid = Array.from({ length: height }, (_, y) =>
+    Array.from({ length: width }, (_, x) => (y >= height - floorHeight ? { type: 999 } : null))
+  );
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function randomSandColor() {
+  const brightness = 180 + Math.floor(Math.random() * 50);
+  return `rgb(${brightness}, ${brightness - 30}, 50)`;
+}
+
+function addSand(x, y) {
+  const gridX = Math.floor(x / cellSize);
+  const gridY = Math.floor(y / cellSize);
+  if (gridY >= 0 && gridY < height && gridX >= 0 && gridX < width) {
+    if (!grid[gridY][gridX]) {
+      grid[gridY][gridX] = { type: 1, color: randomSandColor() };
+    }
+  }
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  addSand(e.clientX, e.clientY);
+});
+
+function updateGrid() {
+  let newGrid = grid.map(row => row.slice());
+
+  for (let y = height - 2; y >= 0; y--) {
+    for (let x = 0; x < width; x++) {
+      let cell = grid[y][x];
+      if (cell && cell.type === 1) {
+        if (y + 1 < height && !grid[y + 1][x]) {
+          newGrid[y][x] = null;
+          newGrid[y + 1][x] = cell;
+        } else {
+          let moved = false;
+          if (x > 0 && y + 1 < height && !grid[y + 1][x - 1]) {
+            newGrid[y][x] = null;
+            newGrid[y + 1][x - 1] = cell;
+            moved = true;
+          }
+          if (!moved && x + 1 < width && y + 1 < height && !grid[y + 1][x + 1]) {
+            newGrid[y][x] = null;
+            newGrid[y + 1][x + 1] = cell;
+          }
+        }
+      }
+    }
+  }
+
+  grid = newGrid;
+}
+
+function drawGrid() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let cell = grid[y][x];
+      if (cell && cell.type === 1) {
+        ctx.fillStyle = cell.color;
+        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+      }
+    }
+  }
+}
+
+function loop() {
+  updateGrid();
+  drawGrid();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
